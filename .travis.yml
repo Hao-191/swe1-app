@@ -10,7 +10,7 @@ script:
 install:
   - pip install -r requirements.txt
 after_success:
-  -python -m coveralls
+  coveralls
 deploy:
   provider: elasticbeanstalk
   access_key_id: $ACCESS_KEY_ID
