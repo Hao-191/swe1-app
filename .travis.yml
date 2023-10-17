@@ -15,9 +15,14 @@ deploy:
   provider: elasticbeanstalk
   access_key_id: $ACCESS_KEY_ID
   secret_access_key: $SECRET_ACCESS_KEY
-  region: "us-east-1"
-  app: "example-app-name"
-  env: "example-app-environment"
+  region: "us-west-2"
+  app: "django-app"
+  env: "test-env-for-django"
   bucket_name: "elasticbeanstalk-us-west-2-143430868238"
   on:
     branch: main
+after_deploy:
+  - aws configure set aws_access_key_id $AWS_ACCESS_ID
+  - aws configure set aws_secret_access_key $AWS_SECRET_ID
+  - aws configure set preview.cloudfront true
+  - aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --paths "/*"
