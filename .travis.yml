@@ -1,0 +1,25 @@
+language: python
+dist: bionic
+os: linux
+python:
+  - "3.11"
+script:
+  - black . --check
+  - flake8 --max-line-length=100
+  - coverage run manage.py test
+install:
+  - pip install -r requirements.txt
+after_success:
+  -python -m coveralls
+deploy:
+  provider: elasticbeanstalk
+  access_key_id:
+    secure: $ACCESS_KEY_ID
+  secret_access_key:
+    secure: $SECRET_ACCESS_KEY
+  region: "us-east-1"
+  app: "example-app-name"
+  env: "example-app-environment"
+  bucket_name: "elasticbeanstalk-us-west-2-143430868238"
+  on:
+    branch: main
