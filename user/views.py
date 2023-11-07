@@ -164,7 +164,7 @@ def accountView(request):
                     login_user.avatar = uploaded_file
                     login_user.save()
                     file_path = os.path.join(
-                        settings.MEDIA_ROOT, "avatars", uploaded_file.name
+                        settings.MEDIA_URL, "avatars", uploaded_file.name
                     )
 
                     # Save the uploaded file to the specified path
