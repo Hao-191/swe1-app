@@ -25,7 +25,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-z2if98e5x^l*zx4!r(72d^(_+ax0pwsflq_s)0pqiey(t_d3lv"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = [
     "medilink-integration.eba-ywbzcdwm.us-west-2.elasticbeanstalk.com",
@@ -153,19 +153,19 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
 
-#MEDIA_URL = "/media/"
-#MEDIA_ROOT = os.path.join(BASE_DIR, "media/")
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media/")
 
 # Use Amazon S3 for storing media files.
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+# DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
-AWS_ACCESS_KEY_ID = 'AKIASCZJFLUHP65L3M75'
-AWS_SECRET_ACCESS_KEY = 'bcOD9AaxNpLEve3KQmpDG/0RsAhiMR+1B4koNBRS'
-AWS_STORAGE_BUCKET_NAME = 'bucket'
-AWS_S3_REGION_NAME = 'us-west-2'  # Replace with your bucket region
-AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
-AWS_DEFAULT_ACL = 'public-read'
-AWS_AUTO_CREATE_BUCKET = True
+# AWS_ACCESS_KEY_ID = 'AKIASCZJFLUHP65L3M75'
+# AWS_SECRET_ACCESS_KEY = 'bcOD9AaxNpLEve3KQmpDG/0RsAhiMR+1B4koNBRS'
+# AWS_STORAGE_BUCKET_NAME = 'mybucketforse'
+# AWS_S3_REGION_NAME = 'us-west-2'  # Replace with your bucket region
+# AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+# AWS_DEFAULT_ACL = 'public-read'
+# AWS_AUTO_CREATE_BUCKET = True
 
-# Set the S3 URL for media files.
-MEDIA_URL = 'https://%s/' % AWS_S3_CUSTOM_DOMAIN
+# # Set the S3 URL for media files.
+# MEDIA_URL = 'https://%s/' % AWS_S3_CUSTOM_DOMAIN
