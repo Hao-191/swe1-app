@@ -1,8 +1,4 @@
 branch-defaults:
-  default:
-    environment: test-env-for-django
-  jay:
-    environment: test-env-for-django
   main:
     environment: test-env-for-django
 environment-defaults:
