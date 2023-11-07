@@ -54,7 +54,6 @@ INSTALLED_APPS = [
     "hospital",
     "user",
     "doctor",
-    "storages",
 ]
 
 MIDDLEWARE = [
