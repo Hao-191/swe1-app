@@ -1,11 +1,11 @@
 import re
 from django.shortcuts import redirect, render
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponseBadRequest
 from django.urls import reverse
 from django.contrib.auth import authenticate, login
 from user.models import Choices, Patient
-from doctor.models import Doctor
-from hospital.models import HospitalAdmin, Hospital
+from doctor.models import Doctor, DoctorAppointment
+from hospital.models import HospitalAdmin, Hospital, HospitalAppointment
 from django.contrib.auth.models import User
 
 # import for email sending
@@ -20,6 +20,9 @@ from django.contrib.auth import logout
 # import for avatar changing
 import os
 from django.conf import settings
+
+# import for checking appointment status
+from django.utils import timezone
 
 
 PASSWORD_RESET_SUBJECT = "MediLink Account Password Reset Request"
@@ -148,7 +151,40 @@ def accountView(request):
     if request.user.is_authenticated:
         user = request.user
         if user.username != "admin":
-            login_user = Patient.objects.filter(email=user.email).first()
+            patient = Patient.objects.filter(email=user.email)
+            doctor = Doctor.objects.filter(email=user.email)
+            hospital_admin = HospitalAdmin.objects.filter(email=user.email)
+
+            # check user types
+            if len(patient) != 0:
+                login_user = patient.first()
+                userType = "patient"
+                doctor_appointments = DoctorAppointment.objects.filter(
+                    patient=login_user
+                )
+                hospital_appointments = HospitalAppointment.objects.filter(
+                    patient=login_user
+                )
+            elif len(doctor) != 0:
+                login_user = doctor.first()
+                userType = "doctor"
+                doctor_appointments = DoctorAppointment.objects.filter(
+                    doctor=login_user
+                )
+                hospital_appointments = HospitalAppointment.objects.filter(
+                    preferred_doctor=login_user
+                )
+            elif len(hospital_admin) != 0:
+                login_user = hospital_admin.first()
+                userType = "hospitalAdmin"
+                doctor_appointments = None
+                hospital_appointments = HospitalAppointment.objects.filter(
+                    hospital=login_user.associated_hospital
+                )
+
+            # check and update the outdated appointments
+            OutdatedAppointments(doctor_appointments, hospital_appointments)
+
             """
                 1. Get method
                 2. Post method
@@ -156,11 +192,31 @@ def accountView(request):
                     - upload avatar
             """
             if request.method == "GET":
-                return render(request, template_name, {"login_user": login_user})
+                return render(
+                    request,
+                    template_name,
+                    {
+                        "login_user": login_user,
+                        "userType": userType,
+                        "doctor_appointments": doctor_appointments,
+                        "hospital_appointments": hospital_appointments,
+                    },
+                )
             else:
                 # -------------- Upload Avatar --------------
                 if len(request.FILES) > 0:
                     uploaded_file = request.FILES["avatar"]
+                    MAX_FILE_SIZE_KB = 50
+                    # Check if the uploaded file size exceeds the maximum allowed size
+                    if (
+                        uploaded_file.size > MAX_FILE_SIZE_KB * 1024
+                    ):  # Convert KB to bytes
+                        return HttpResponseBadRequest(
+                            "File size is too large. Maximum allowed size is {} KB.".format(
+                                MAX_FILE_SIZE_KB
+                            )
+                        )
+
                     login_user.avatar = uploaded_file
                     login_user.save()
                     file_path = os.path.join(
@@ -172,7 +228,7 @@ def accountView(request):
                         for chunk in uploaded_file.chunks():
                             destination.write(chunk)
 
-                    return render(request, template_name, {"login_user": login_user})
+                    return redirect("user:account")
 
                 # -------------- Edit Account Info --------------
                 else:
@@ -184,7 +240,7 @@ def accountView(request):
                     login_user.borough = request.POST.get("borough")
                     login_user.zip = request.POST.get("zip")
                     login_user.save()
-                    return render(request, template_name, {"login_user": login_user})
+                    return redirect("user:account")
 
         # admin user logged in, redirect to admin page
         else:
@@ -197,6 +253,62 @@ def accountView(request):
         messages.error(request, alert_message)
         # auto redirect to login page
         return HttpResponseRedirect(reverse("user:login"))
+
+
+def OutdatedAppointments(doctor_appointments, hospital_appointments):
+    now = timezone.now()
+    # check consultations
+    if doctor_appointments:
+        for appointment in doctor_appointments:
+            if appointment.status == "REQ" and appointment.start_time <= now:
+                appointment.status = "CCL"
+                appointment.cancel_msg = "Consultation outdated, please book a new one."
+                appointment.save()
+    # check appointments
+    if hospital_appointments:
+        for appointment in hospital_appointments:
+            if appointment.status == "REQ" and appointment.start_time <= now:
+                appointment.status = "CCL"
+                appointment.cancel_msg = "Appointment outdated, please book a new one."
+                appointment.save()
+
+
+def cancelAppointment(request):
+    appointment_id = request.POST.get("appointment_id")
+    appointment_type = request.POST.get("appointment_type")
+    operation = request.POST.get("operation")
+    cancel_reason = request.POST.get("cancel_reason")
+
+    if appointment_type == "consultation":
+        consultation = DoctorAppointment.objects.filter(id=appointment_id).first()
+        if consultation.status != "CCL" and consultation.status != "REJ":
+            consultation.cancel_msg = cancel_reason
+            consultation.status = operation
+            consultation.save()
+    else:
+        appointment = HospitalAppointment.objects.filter(id=appointment_id).first()
+        if appointment.status != "CCL" and appointment.status != "REJ":
+            appointment.cancel_msg = cancel_reason
+            appointment.status = operation
+            appointment.save()
+
+    return redirect("user:account")
+
+
+def confirmAppointment(request):
+    appointment_id = request.POST.get("appointment_id")
+    appointment_type = request.POST.get("appointment_type")
+    operation = request.POST.get("operation")
+
+    if appointment_type == "consultation":
+        consultation = DoctorAppointment.objects.filter(id=appointment_id).first()
+        consultation.status = operation
+        consultation.save()
+    else:
+        appointment = HospitalAppointment.objects.filter(id=appointment_id).first()
+        appointment.status = operation
+        appointment.save()
+    return redirect("user:account")
 
 
 def isValidEmail(email):
